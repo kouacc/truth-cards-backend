@@ -45,7 +45,6 @@ COPY --chown=bunuser:bunuser src ./src
 COPY --chown=bunuser:bunuser utils ./utils
 COPY --chown=bunuser:bunuser db ./db
 COPY --chown=bunuser:bunuser emails ./emails
-COPY --chown=bunuser:bunuser static ./static
 COPY --chown=bunuser:bunuser assets ./assets
 COPY --chown=bunuser:bunuser migrate.ts ./
 COPY --chown=bunuser:bunuser tsconfig.json ./
