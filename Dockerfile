@@ -57,4 +57,4 @@ USER bunuser
 EXPOSE 3000
 
 # Commande de démarrage
-CMD ["bun", "run", "start"]
+CMD ["bun", "run", "src/index.ts"]
