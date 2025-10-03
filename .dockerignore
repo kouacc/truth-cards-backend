@@ -1,0 +1,46 @@
+# Fichiers de développement
+.git
+.gitignore
+README.md
+.env
+.env.local
+.env.example
+
+# Logs
+*.log
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dépendances (copiées séparément)
+node_modules
+
+# Fichiers temporaires
+*.tmp
+*.temp
+.cache
+
+# Fichiers de test
+*.test.*
+__tests__
+coverage
+
+# Fichiers IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Fichiers OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Build artifacts (non nécessaires car on ne compile pas)
+dist
+build

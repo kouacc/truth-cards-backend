@@ -1,0 +1,87 @@
+import { Hono } from "hono";
+import { auth } from "../../utils/auth";
+import { redis } from "bun";
+import { createGameCode, createGameToken } from "../../utils/id";
+import { getQuestions, goToNextQuestion } from "../../utils/questions";
+import { convertObjectToHMSet } from "../../utils/redis";
+import { io } from "..";
+import { startGameQuestionLoop } from "../../utils/loop";
+
+const games = new Hono<{
+	Variables: {
+		user: typeof auth.$Infer.Session.user | null;
+		session: typeof auth.$Infer.Session.session | null
+	}
+}>();
+
+interface GameSettings {
+    customQuestions?: { [key: string]: string };
+    amountOfQuestions?: number;
+    timePerQuestion?: number;
+}
+
+games.use("*", async (c, next) => {
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!session) {
+      c.set("user", null);
+      c.set("session", null);
+      return next();
+    }
+    c.set("user", session.user);
+    c.set("session", session.session);
+    return next();
+});
+
+games.post('/init', async (c) => {
+    const user = c.get("user");
+    const { customQuestions, amountOfQuestions, timePerQuestion }: GameSettings = await c.req.json();
+ 
+    const gameCode = createGameCode();
+    const gameToken = createGameToken();
+
+    const gameInfo = {
+        host: user?.id || null,
+        gameCode: gameCode,
+        customQuestions: customQuestions || {},
+        amountOfQuestions: amountOfQuestions || 10,
+        timePerQuestion: timePerQuestion || 30,
+    }
+
+    const questions = await getQuestions({ amount: gameInfo.amountOfQuestions });
+
+    await redis.hmset(`game:${gameCode}:settings`, convertObjectToHMSet(gameInfo));
+    await redis.set(`game:${gameCode}:currentQuestionIndex`, "0");
+
+    //push les questions dans une liste redis
+    const serializedQuestions = questions.map(q => JSON.stringify(q));
+    await redis.rpush(`game:${gameCode}:questions`, ...serializedQuestions as [string, ...string[]]);
+
+    return c.json({ gameCode, gameToken });
+})
+
+games.delete('/:gameCode', async (c) => {
+    const user = c.get("user");
+    const { gameCode } = c.req.param();
+
+    await redis.del(`game:${gameCode}`);
+
+    return c.json({ message: `Game ${gameCode} deleted` });
+})
+
+games.post('/:gameCode/start', async (c) => {
+    const user = c.get("user");
+    const { gameCode } = c.req.param();
+
+    io.to(gameCode).emit("gameStatus", { status: "started" });
+
+    const gameSettings = await redis.hmget(`game:${gameCode}:settings`, ["amountOfQuestions", "timePerQuestion"]);
+    if (!gameSettings[0] || !gameSettings[1]) {
+        return c.json({ error: "Game settings not found" }, 404);
+    }
+
+    const stopGameLoop = await startGameQuestionLoop(gameCode, parseInt(gameSettings[0]), parseInt(gameSettings[1]));
+
+    return c.json({ message: `Game ${gameCode} started` });
+})
+
+export { games };

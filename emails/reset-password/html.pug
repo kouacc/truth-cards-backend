@@ -1,0 +1,15 @@
+html
+    head 
+        link(rel="stylesheet", href="/style.css", data-inline)
+    body
+        table(width="100%" cellpadding="0" cellspacing="0" style="margin: 0; padding: 0;")
+            tr
+                td(align="center" style="padding: 20px;")
+                    table(cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 0.5rem; border: 1px solid #E5E7EB; width: 500px; height:600px" )
+                        tr
+                            td(style="padding: 40px;")
+                                p Bonjour #{name}
+                                p Merci de cliquer sur le lien ci-dessous pour réinitialiser votre mot de passe.
+                                a(class='btn' href=url) Réinitialiser
+                                p Si vous n'avez pas demandé de changement de mot de passe, vous pouvez ignorer ce message.
+

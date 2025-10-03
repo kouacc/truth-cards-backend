@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1757664283388,
+      "tag": "0000_graceful_night_nurse",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1757774849799,
+      "tag": "0001_slippery_mister_fear",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1758181879339,
+      "tag": "0002_bent_fantastic_four",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1758636896443,
+      "tag": "0003_long_professor_monster",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1759058600565,
+      "tag": "0004_long_pestilence",
+      "breakpoints": true
+    }
+  ]
+}
