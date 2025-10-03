@@ -47,6 +47,7 @@ COPY --chown=bunuser:bunuser db ./db
 COPY --chown=bunuser:bunuser emails ./emails
 COPY --chown=bunuser:bunuser static ./static
 COPY --chown=bunuser:bunuser assets ./assets
+COPY --chown=bunuser:bunuser migrate.ts ./
 COPY --chown=bunuser:bunuser tsconfig.json ./
 COPY --chown=bunuser:bunuser drizzle.config.ts ./
 
@@ -57,4 +58,4 @@ USER bunuser
 EXPOSE 3000
 
 # Commande de démarrage
-CMD ["bun", "run", "src/index.ts"]
+CMD ["bun", "run", "start"]

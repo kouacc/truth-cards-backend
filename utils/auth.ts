@@ -11,7 +11,7 @@ export const auth = betterAuth({
         provider: "pg",
     }),
     appName: "truth-cards-backend",
-    trustedOrigins: ["http://localhost:5173", "https://appleid.apple.com"],
+    trustedOrigins: ["http://localhost:5173", "https://appleid.apple.com", "truthcards://"],
     plugins: [expo(), admin(), username(), passkey()],
     emailAndPassword: {
         enabled: true,
