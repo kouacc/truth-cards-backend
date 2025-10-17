@@ -5,6 +5,7 @@ import { expo } from "@better-auth/expo";
 import { admin, username } from "better-auth/plugins"
 import { passkey } from "better-auth/plugins/passkey"
 import { email } from "./email";
+import badwords from 'french-badwords-list';
 
 export const auth = betterAuth({
     database: drizzleAdapter(db, {
@@ -12,14 +13,34 @@ export const auth = betterAuth({
     }),
     appName: "truth-cards-backend",
     trustedOrigins: ["http://localhost:5173", "https://appleid.apple.com", "truthcards://"],
-    plugins: [expo(), admin(), username(), passkey()],
+    plugins: [
+        expo(), 
+        username({
+            usernameValidator: (username) => {
+                if (!username) {
+                    return false
+                }
+
+                if (badwords.regex.test(username)) {
+                    return false
+                }
+
+                return true
+            },
+        }), 
+        passkey(), 
+        admin({
+            bannedUserMessage: "Votre compte a été banni.",
+            
+        })
+    ],
     emailAndPassword: {
         enabled: true,
         minPasswordLength: 8,
         maxPasswordLength: 128,
         sendResetPassword: async ({user, url}) => {
             await email.send({
-                template: 'password-reset',
+                template: 'reset-password',
                 message: {
                     to: user.email
                 },
@@ -94,6 +115,6 @@ export const auth = betterAuth({
                 }
                 })
             }
-        }
-    }
+        },
+    },
 });

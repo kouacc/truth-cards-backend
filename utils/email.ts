@@ -16,7 +16,7 @@ const config = {
 export const email = new Email({
     transport: config,
     message: {
-        from: process.env.SMTP_FROM || '',
+        from: `${process.env.SMTP_FROM_NAME || ''} <${process.env.SMTP_FROM_ADDRESS || ''}>`,
     },
     juice: true,
     juiceResources: {
@@ -29,5 +29,5 @@ export const email = new Email({
         open: true,
         openSimulator: false
     },
-    send: process.env.NODE_ENV === 'production',
+    send: true //process.env.NODE_ENV === 'production',
 })

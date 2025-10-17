@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import { auth } from "../../utils/auth";
 import { db } from "../../db/drizzle";
-import { category, Category, question, Question, reports, sets } from "../../db/schemas/schema";
-import { count, eq } from "drizzle-orm";
-import { S3 } from "../../utils/bucket";
+import { category, Category, question, type Question, reports, sets } from "../../db/schemas/schema";
+import { count, eq, sql } from "drizzle-orm";
+import { deleteProfilePicture, S3, uploadProfilePicture } from "../../utils/bucket";
+import { email } from "../../utils/email";
 
 const admin = new Hono<{
 	Variables: {
@@ -40,7 +41,9 @@ admin.get('/categories', async (c) => {
     if(user.role !== 'admin') return c.body(null, 403);
 
     const sets = await db.query.category.findMany({
-        // TODO ajouter count de questions par catégories
+        extras: {
+            questionsCount: sql<number>`(select count(*) from question where question.category = category.id)`.as('questionsCount')
+        }
     })
 
     return c.json(sets);
@@ -92,6 +95,26 @@ admin.get('/categories/:id', async (c) => {
     return c.json({ category: cat, assets: assetsList });
 })
 
+admin.patch('/categories/:id', async (c) => {
+    const user = c.get("user")
+    
+    if(!user) return c.body(null, 401);
+    if(user.role !== 'admin') return c.body(null, 403);
+
+    const { id } = c.req.param();
+
+    const { title, description } = await c.req.json<Category>();
+
+    const cat = await db.update(category).set({
+        title,
+        description
+    })
+    .where(eq(category.id, id))
+    .returning();
+
+    return c.json(cat[0]);
+});
+
 admin.delete('/categories/:id', async (c) => {
     const user = c.get("user")
 	
@@ -111,14 +134,15 @@ admin.post('/questions/create', async (c) => {
 	if(!user) return c.body(null, 401);
     if(user.role !== 'admin') return c.body(null, 403);
 
-    const { question: ques, category } = await c.req.json<Question>();
+    const { question: ques, answer, category } = await c.req.json<Question>();
 
-    await db.insert(question).values({
+    const q = await db.insert(question).values({
         question: ques,
+        answer,
         category
     }).returning().onConflictDoNothing();
 
-    return c.json({ success: true });
+    return c.json(q[0]);
 })
 
 admin.patch('/questions/:id', async (c) => {
@@ -129,8 +153,18 @@ admin.patch('/questions/:id', async (c) => {
 
     const { id } = c.req.param();
 
-    const { question: ques, category } = await c.req.json<Question>();
-})
+    const { question: ques, answer, category } = await c.req.json<Question>();
+
+    const q = await db.update(question).set({
+        question: ques,
+        answer: answer,
+        category: category
+    })
+    .where(eq(question.id, id))
+    .returning();
+
+    return c.json(q[0]);
+});
 
 admin.delete('/questions/:id', async (c) => {
     const user = c.get("user")
@@ -223,6 +257,7 @@ admin.get('/reports/:id', async (c) => {
                     displayUsername: true,
                     email: true,
                     emailVerified: true,
+                    image: true
                 },
             },
             userReporting: {
@@ -232,6 +267,7 @@ admin.get('/reports/:id', async (c) => {
                     displayUsername: true,
                     email: true,
                     emailVerified: true,
+                    image: true
                 },
             },
         }
@@ -253,6 +289,38 @@ admin.delete('/reports/:id', async (c) => {
     return c.json({ success: true });
 })
 
+admin.post('/:userId/profilepic', async (c) => {
+    const user = c.get("user")
+    if(!user) return c.body(null, 401);
+
+    if(user.role !== 'admin') return c.body(null, 403);
+
+    const { userId } = c.req.param();
+
+    const queryUser = await auth.api.getUser({
+        headers: c.req.raw.headers,
+        query: {
+            id: userId
+        }
+    })
+
+    if (!queryUser) return c.body(null, 404);
+
+    if (queryUser.image) {
+        const filename = queryUser.image.split('/').pop();
+        await deleteProfilePicture(queryUser.id, filename!);
+    }
+
+    const formData = await c.req.formData();
+    const file = formData.get('file') as File;
+    if(!file) return c.body(null, 400);
+
+    const profilePictureUrl = await uploadProfilePicture(userId, file);
+
+    return c.json({ profilePictureUrl });
+})
+
+
 admin.get('/', async (c) => {
     const files = await S3.list({
         prefix: 'tc-icon Exports/'
@@ -273,16 +341,37 @@ admin.delete('/assets/:categoryId/delete/:assetId', async (c) => {
     return c.json({ success: true });
 })
 
-admin.patch('/legal/:file/update', async (c) => {
+admin.get('/legal/diff', async (c) => {
     const user = c.get("user")
 
     if(!user) return c.body(null, 401);
     if(user.role !== 'admin') return c.body(null, 403);
 
-    const { file } = c.req.param() as { file: 'cgu' | 'mentions' };
-    const content = await c.req.text();
+    const cgu = Bun.file('./assets/cgu.md');
+    const mentions = Bun.file('./assets/mentions.md');
+    const privacy = Bun.file('./assets/privacy.md');
 
-    await Bun.write(`./assets/${file}.md`, content);
+    return c.json({
+        cgu: cgu.lastModified,
+        mentions: mentions.lastModified,
+        privacy: privacy.lastModified,
+    })
+})
+
+admin.put('/legal/:type', async (c) => {
+    const user = c.get("user")
+
+    if(!user) return c.body(null, 401);
+    if(user.role !== 'admin') return c.body(null, 403);
+
+    const { type } = c.req.param() as { type: 'cgu' | 'mentions' | 'privacy' };
+
+    if(!['cgu', 'mentions', 'privacy'].includes(type)) {
+        return c.json({ error: 'Invalid type' }, 400);
+    }
+
+    const content = await c.req.text();
+    await Bun.write(`./assets/${type}.md`, content);
 
     return c.json({ success: true });
 })

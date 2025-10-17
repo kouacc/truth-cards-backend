@@ -2,3 +2,6 @@
 node_modules/
 static/
 .env
+.DS_Store
+/assets/*
+email.ts

@@ -1,5 +1,6 @@
 import { healthCheck } from "./health";
-import { ws } from "./ws";
 import { games } from "./games";
+import { admin } from "./admin";
+import { userSets } from "./sets";
 
-export { healthCheck, ws, games };
+export { healthCheck, games, admin, userSets };
