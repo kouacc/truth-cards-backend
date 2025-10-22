@@ -28,7 +28,11 @@ export const auth = betterAuth({
                 return true
             },
         }), 
-        passkey(), 
+        passkey({
+            rpName: "Truth Cards",
+            rpID: "admin.truthcards.maxencelallemand.fr",
+            origin: ["https://admin.truthcards.maxencelallemand.fr", "http://localhost:5173"]
+        }), 
         admin({
             bannedUserMessage: "Votre compte a été banni.",
             

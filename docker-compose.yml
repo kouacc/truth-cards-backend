@@ -1,4 +1,38 @@
 services:
+  # Service pour exécuter les migrations
+  migrate:
+    build: .
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/app
+    command: ["bun", "run", "migrate"]
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+    restart: "no"
+
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/app
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+      - migrate
+    networks:
+      - app-network
+    volumes:
+      - ./assets:/app/assets:ro
+
   postgres:
     image: postgres:latest
     environment:
@@ -7,16 +41,20 @@ services:
       POSTGRES_DB: app
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    networks:
+      - app-network
 
   redis:
     image: redis:alpine
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  app-network:
+    driver: bridge
