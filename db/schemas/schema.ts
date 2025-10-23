@@ -4,7 +4,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import { user } from "./auth-schema";
 
 export const category = pgTable('categorie', {
-    id: text("id").primaryKey().notNull().$defaultFn(() => createID()),
+    id: text("id").primaryKey().notNull(),
     title: text("title").notNull(),
     description: text("description").notNull(),
     assets: text("assets").notNull(),

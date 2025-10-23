@@ -5,6 +5,7 @@ import { category, Category, question, type Question, reports, sets } from "../.
 import { count, eq, sql } from "drizzle-orm";
 import { deleteProfilePicture, S3, uploadProfilePicture } from "../../utils/bucket";
 import { email } from "../../utils/email";
+import { createID } from "../../utils";
 
 const admin = new Hono<{
 	Variables: {
@@ -55,12 +56,15 @@ admin.post('/categories/create', async (c) => {
 	if(!user) return c.body(null, 401);
     if(user.role !== 'admin') return c.body(null, 403);
 
-    const { title, description, assets } = await c.req.json<Category>();
+    const { title, description } = await c.req.json<Category>();
+
+    const id = createID();
 
     const cat = await db.insert(category).values({
+        id,
         title,
         description,
-        assets
+        assets: process.env.BUCKET_PUBLIC_URL + '/categories/' + id
     })
     .returning()
     .onConflictDoNothing();
