@@ -29,7 +29,8 @@ services:
       - redis
       - migrate
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.1
     volumes:
       - ./assets:/app/assets:ro
 
@@ -42,14 +43,16 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.2
 
   redis:
     image: redis:alpine
     volumes:
       - redis_data:/data
     networks:
-      - app-network
+      app-network:
+        ipv4_address: 172.20.0.3
 
 volumes:
   postgres_data:
