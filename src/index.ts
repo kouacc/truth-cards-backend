@@ -123,7 +123,7 @@ const { websocket } = engine.handler();
 app.use(
 	"*", // or replace with "*" to enable cors for all routes
 	cors({
-		origin: ["http://localhost:5173", "https://admin.socket.io"],
+		origin: [process.env.NODE_ENV === "production" ? "https://admin.truthcards.maxencelallemand.fr" : "http://localhost:5173", "https://admin.socket.io"],
 		allowHeaders: ["Content-Type", "Authorization"],
 		allowMethods: ["POST", "GET", "OPTIONS", "PUT", "DELETE", "PATCH"],
 		exposeHeaders: ["Content-Length"],
