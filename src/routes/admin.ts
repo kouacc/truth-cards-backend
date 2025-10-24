@@ -65,7 +65,7 @@ admin.get('/categories', async (c) => {
         const banner = assetList?.find(asset => asset.key!.includes(`${set.id}/banner/`));
         return {
             ...set,
-            assets: process.env.BUCKET_PUBLIC_URL! + '/' + banner?.key
+            assets: banner?.key ? process.env.BUCKET_PUBLIC_URL! + '/' + banner.key : null
         }
     })
 
@@ -167,9 +167,11 @@ admin.patch('/categories/:id/assets', async (c) => {
 
     if(!asset) return c.body(null, 400);
 
-    const assetKey = `categories/${id}/${editedAsset}/` + asset.name;
+    if (oldAsset) {
+        await S3.delete('categories/' + id + '/' + editedAsset + '/' + oldAsset);
+    }
 
-    await S3.delete('categories/' + id + '/' + editedAsset + '/' + oldAsset);
+    const assetKey = `categories/${id}/${editedAsset}/` + asset.name;
 
     await S3.write(assetKey, asset)
 
