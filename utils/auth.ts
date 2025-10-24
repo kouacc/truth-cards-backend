@@ -12,7 +12,7 @@ export const auth = betterAuth({
         provider: "pg",
     }),
     appName: "truth-cards-backend",
-    trustedOrigins: ["http://localhost:5173", "https://appleid.apple.com", "truthcards://"],
+    trustedOrigins: [process.env.NODE_ENV === 'production' ? 'https://admin.truthcards.maxencelallemand.fr' : 'http://localhost:5173', "https://appleid.apple.com", "truthcards://"],
     plugins: [
         expo(), 
         username({
@@ -31,7 +31,7 @@ export const auth = betterAuth({
         passkey({
             rpName: "Truth Cards",
             rpID: "admin.truthcards.maxencelallemand.fr",
-            origin: ["https://admin.truthcards.maxencelallemand.fr", "http://localhost:5173"]
+            origin: [process.env.NODE_ENV === "production" ? "https://admin.truthcards.maxencelallemand.fr" : "http://localhost:5173", "https://api.truthcards.maxencelallemand.fr"],
         }), 
         admin({
             bannedUserMessage: "Votre compte a été banni.",
@@ -98,7 +98,7 @@ export const auth = betterAuth({
         }
     },
     advanced: {
-        cookiePrefix: "truthcards-session"
+        cookiePrefix: "truthcards"
     },
     user: {
         deleteUser: {
