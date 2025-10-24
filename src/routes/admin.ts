@@ -6,6 +6,8 @@ import { count, eq, sql } from "drizzle-orm";
 import { deleteProfilePicture, S3, uploadProfilePicture } from "../../utils/bucket";
 import { email } from "../../utils/email";
 import { createID } from "../../utils";
+import { io } from "..";
+import { getStats } from "../../utils/stats";
 
 const admin = new Hono<{
 	Variables: {
@@ -41,9 +43,29 @@ admin.get('/categories', async (c) => {
 	if(!user) return c.body(null, 401);
     if(user.role !== 'admin') return c.body(null, 403);
 
-    const sets = await db.query.category.findMany({
+    const base = await db.query.category.findMany({
+        columns: {
+            id: true,
+            title: true,
+            description: true,
+            assets: true,
+        },
         extras: {
             questionsCount: sql<number>`(select count(*) from question where question.category = category.id)`.as('questionsCount')
+        }
+    })
+
+    const assets = await S3.list({
+        prefix: 'categories/'
+    })
+
+    const assetList = assets.contents?.filter(asset => asset.size! > 0)
+
+    const sets = base.map(set => {
+        const banner = assetList?.find(asset => asset.key!.includes(`${set.id}/banner/`));
+        return {
+            ...set,
+            assets: process.env.BUCKET_PUBLIC_URL! + '/' + banner?.key
         }
     })
 
@@ -64,7 +86,7 @@ admin.post('/categories/create', async (c) => {
         id,
         title,
         description,
-        assets: process.env.BUCKET_PUBLIC_URL + '/categories/' + id
+        assets: "categories/" + id
     })
     .returning()
     .onConflictDoNothing();
@@ -94,9 +116,20 @@ admin.get('/categories/:id', async (c) => {
         prefix: `categories/${id}/`
     })
     
-    // TODO inclure le lien CDN dans la liste des assets
+    const contentList = assetsList.contents?.filter(asset => asset.size! > 0)
 
-    return c.json({ category: cat, assets: assetsList });
+    const assets = {
+        card: contentList?.find(asset => asset.key!.includes('card/'))?.key 
+            ? process.env.BUCKET_PUBLIC_URL! + '/' + contentList.find(asset => asset.key!.includes('card/'))?.key 
+            : null,
+        banner: contentList?.find(asset => asset.key!.includes('banner/'))?.key 
+            ? process.env.BUCKET_PUBLIC_URL! + '/' + contentList.find(asset => asset.key!.includes('banner/'))?.key 
+            : null,
+    }
+
+
+
+    return c.json({ category: cat, assets });
 })
 
 admin.patch('/categories/:id', async (c) => {
@@ -119,6 +152,32 @@ admin.patch('/categories/:id', async (c) => {
     return c.json(cat[0]);
 });
 
+admin.patch('/categories/:id/assets', async (c) => {
+    const user = c.get("user")
+
+    if(!user) return c.body(null, 401);
+    if(user.role !== 'admin') return c.body(null, 403);
+
+    const formData = await c.req.formData();
+    const editedAsset = formData.get('editedAsset') as string;
+    const asset = formData.get('asset') as File;
+    const oldAsset = formData.get('oldAsset') as string;
+
+    const { id } = c.req.param();
+
+    if(!asset) return c.body(null, 400);
+
+    const assetKey = `categories/${id}/${editedAsset}/` + asset.name;
+
+    await S3.delete('categories/' + id + '/' + editedAsset + '/' + oldAsset);
+
+    await S3.write(assetKey, asset)
+
+
+    return c.json({ url: process.env.BUCKET_PUBLIC_URL! + '/' + assetKey });
+})
+
+
 admin.delete('/categories/:id', async (c) => {
     const user = c.get("user")
 	
@@ -128,6 +187,8 @@ admin.delete('/categories/:id', async (c) => {
     const { id } = c.req.param();
 
     await db.delete(category).where(eq(category.id, id));
+
+    await S3.delete('categories/' + id + '/');
 
     return c.json({ success: true });
 })
@@ -332,19 +393,6 @@ admin.get('/', async (c) => {
     return c.json(files);
 })
 
-admin.delete('/assets/:categoryId/delete/:assetId', async (c) => {
-    const user = c.get("user")
-	
-	if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-    
-    const { categoryId, assetId } = c.req.param();
-
-    await S3.file(`categories/${categoryId}/${assetId}`).delete();
-
-    return c.json({ success: true });
-})
-
 admin.get('/legal/diff', async (c) => {
     const user = c.get("user")
 
@@ -378,6 +426,26 @@ admin.put('/legal/:type', async (c) => {
     await Bun.write(`./assets/${type}.md`, content);
 
     return c.json({ success: true });
+})
+
+admin.get('/dashboard', async (c) => {
+    const user = c.get("user")
+    if(!user) return c.body(null, 401);
+    if(user.role !== 'admin') return c.body(null, 403);
+
+    const { categoriesCount, usersCount, questionsCount, setsCount } = await getStats();
+
+    const rooms = Array.from(io.sockets.adapter.rooms.keys()).filter(roomId => roomId.length === 6);
+    console.log(rooms);
+
+    return c.json({
+        rooms: rooms.length,
+        connections: io.sockets.sockets.size,
+        categories: categoriesCount,
+        questions: questionsCount,
+        usersSets: setsCount,
+        users: usersCount,
+    })
 })
 
 export { admin };

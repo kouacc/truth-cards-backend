@@ -136,10 +136,6 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 	return auth.handler(c.req.raw);
 });
 
-app.get('/', (c) => {
-  return c.text('Hello Hono!')
-})
-
 app.route('/health', healthCheck)
 app.route('/games', games)
 app.route('/admin', admin)
@@ -210,7 +206,6 @@ app.post('/user/picture', async (c) => {
 })
 
 app.use('/static/*', serveStatic({ root: './' }))
-
 
 export default {
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
