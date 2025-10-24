@@ -9,7 +9,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 
 # Installer les dépendances de production et de développement
-RUN bun install --frozen-lockfile
+RUN bun install
 
 # Étape de construction
 FROM base AS build
