@@ -30,7 +30,7 @@ services:
       - migrate
     networks:
       truth-cards-network:
-        ipv4_address: 172.20.0.1
+        ipv4_address: 172.20.0.2
     volumes:
       - ./assets:/app/assets:ro
 
@@ -44,7 +44,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       truth-cards-network:
-        ipv4_address: 172.20.0.2
+        ipv4_address: 172.20.0.3
 
   redis:
     image: redis:alpine
@@ -52,7 +52,7 @@ services:
       - redis_data:/data
     networks:
       truth-cards-network:
-        ipv4_address: 172.20.0.3
+        ipv4_address: 172.20.0.4
 
 volumes:
   postgres_data:
