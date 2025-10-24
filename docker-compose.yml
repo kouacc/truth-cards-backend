@@ -43,7 +43,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      app-network:
+      truth-cards-network:
         ipv4_address: 172.20.0.2
 
   redis:
