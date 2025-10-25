@@ -22,6 +22,7 @@
       "devDependencies": {
         "@types/bun": "latest",
         "@types/email-templates": "^10.0.4",
+        "@types/french-badwords-list": "^1.0.0",
         "@types/pg": "^8.15.5",
         "drizzle-kit": "^0.31.4",
       },
@@ -618,6 +619,8 @@
     "@types/cors": ["@types/cors@2.8.19", "", { "dependencies": { "@types/node": "*" } }, "sha512-mFNylyeyqN93lfe/9CSxOGREz8cpzAhH+E93xJ4xWQf62V8sQ/24reV2nyzUWM6H6Xji+GGHpkbLe7pVoUEskg=="],
 
     "@types/email-templates": ["@types/email-templates@10.0.4", "", { "dependencies": { "@types/html-to-text": "*", "@types/nodemailer": "*", "juice": "^8.0.0" } }, "sha512-8O2bdGPO6RYgH2DrnFAcuV++s+8KNA5e2Erjl6UxgKRVsBH9zXu2YLrLyOBRMn2VyEYmzgF+6QQUslpVhj0y/g=="],
+
+    "@types/french-badwords-list": ["@types/french-badwords-list@1.0.0", "", {}, "sha512-w1ipKTOk9bOcpJzzpHZogUFspEDsq70T3bxt4xlbo7o6ZAk15woMHaXIVyZY26ETpqxQvGNOPsxygc9ZHYe7fA=="],
 
     "@types/graceful-fs": ["@types/graceful-fs@4.1.9", "", { "dependencies": { "@types/node": "*" } }, "sha512-olP3sd1qOEe5dXTSaFvQG+02VdRXcdytWLAZsAq1PecU8uqQAhkrnbli7DagjtXKW/Bl7YJbUsa8MPcuc8LHEQ=="],
 
