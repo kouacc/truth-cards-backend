@@ -78,7 +78,7 @@ export const auth = betterAuth({
             mapProfileToUser: (profile) => {
                 return {
                     email: profile.email,
-                    name: profile.name,
+                    name: profile.name || `${profile.given_name} ${profile.family_name}`,
                     image: profile.picture,
                     emailVerified: profile.email_verified,
                 }
@@ -92,7 +92,7 @@ export const auth = betterAuth({
             mapProfileToUser: (profile) => {
                 return {
                     email: profile.email,
-                    name: profile.user?.name.firstName || profile.name,
+                    name: profile.name,
                     image: profile.picture,
                 }
             }
