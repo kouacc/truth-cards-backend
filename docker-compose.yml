@@ -9,7 +9,8 @@ services:
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/app
     command: ["bun", "run", "migrate"]
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - truth-cards-network
     restart: "no"
@@ -25,14 +26,23 @@ services:
       - DATABASE_URL=postgresql://postgres:password@postgres:5432/app
       - REDIS_URL=redis://redis:6379
     depends_on:
-      - postgres
-      - redis
-      - migrate
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: "curl -f http://localhost:3000/health || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 5  
     networks:
       truth-cards-network:
         ipv4_address: 172.20.0.2
     volumes:
       - ./assets:/app/assets:ro
+    restart: unless-stopped
 
   postgres:
     image: postgres:latest
@@ -45,6 +55,12 @@ services:
     networks:
       truth-cards-network:
         ipv4_address: 172.20.0.3
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USERNAME}", "-d", "${DB_DATABASE:-coolify}" ]
+      interval: 5s
+      retries: 10
+      timeout: 2s
+    restart: unless-stopped
 
   redis:
     image: redis:alpine
@@ -53,6 +69,12 @@ services:
     networks:
       truth-cards-network:
         ipv4_address: 172.20.0.4
+    healthcheck:
+      test: redis-cli -a ${REDIS_PASSWORD} ping | grep PONG
+      interval: 5s
+      retries: 5
+      timeout: 2s
+    restart: unless-stopped
 
 volumes:
   postgres_data:
