@@ -116,7 +116,8 @@ export const auth = betterAuth({
                 },
                 locals: {
                     name: user.name,
-                    url: url
+                    url: url,
+                    token: token
                 }
                 })
             }

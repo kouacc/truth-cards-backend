@@ -2,9 +2,8 @@ import { Hono } from "hono";
 import { auth } from "../../utils/auth";
 import { db } from "../../db/drizzle";
 import { category, Category, question, type Question, reports, sets } from "../../db/schemas/schema";
-import { count, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { deleteProfilePicture, S3, uploadProfilePicture } from "../../utils/bucket";
-import { email } from "../../utils/email";
 import { createID } from "../../utils";
 import { io } from "..";
 import { getStats } from "../../utils/stats";
@@ -26,15 +25,6 @@ admin.use("*", async (c, next) => {
   	c.set("user", session.user);
   	c.set("session", session.session);
   	return next();
-});
-
-admin.get('/questions', async (c) => {
-	const user = c.get("user")
-	
-	if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
-    const questions = await db.query.question.findMany({})
 });
 
 admin.get('/categories', async (c) => {
@@ -385,14 +375,6 @@ admin.post('/:userId/profilepic', async (c) => {
     const profilePictureUrl = await uploadProfilePicture(userId, file);
 
     return c.json({ profilePictureUrl });
-})
-
-
-admin.get('/', async (c) => {
-    const files = await S3.list({
-        prefix: 'tc-icon Exports/'
-    });
-    return c.json(files);
 })
 
 admin.get('/legal/diff', async (c) => {

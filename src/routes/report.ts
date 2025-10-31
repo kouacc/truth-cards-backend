@@ -1,8 +1,7 @@
 import { Hono } from "hono";
 import { auth } from "../../utils/auth";
 import { db } from "../../db/drizzle";
-import { eq } from "drizzle-orm";
-import { question, reports, sets } from "../../db/schemas/schema";
+import { reports } from "../../db/schemas/schema";
 
 const report = new Hono<{
     Variables: {

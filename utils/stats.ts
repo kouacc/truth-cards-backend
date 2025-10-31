@@ -1,11 +1,16 @@
 import { db } from "../db/drizzle";
 import { sql } from "drizzle-orm";
-import { category, question, sets } from "../db/schemas/schema";
-import { user } from "../db/schemas/auth-schema";
 import { client } from "./redis";
 
 const CACHE_KEY = "stats:global";
 const CACHE_TTL = 60 * 10
+
+interface StatsQueryResult {
+    categories_count: string | number;
+    users_count: string | number;
+    questions_count: string | number;
+    sets_count: string | number;
+}
 
 export async function getStats(): Promise<{
     categoriesCount: number;
@@ -26,7 +31,7 @@ export async function getStats(): Promise<{
             (SELECT COUNT(*) FROM sets) as sets_count
     `);
 
-    const row = result.rows[0] as any;
+    const row = result.rows[0] as unknown as StatsQueryResult;
 
     const stats = {
         categoriesCount: Number(row.categories_count),

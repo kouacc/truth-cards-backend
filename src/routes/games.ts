@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { auth } from "../../utils/auth";
 import { redis } from "bun";
 import { createGameCode, createGameToken } from "../../utils/id";
-import { getQuestions, goToNextQuestion } from "../../utils/questions";
+import { getQuestions } from "../../utils/questions";
 import { convertObjectToHMSet } from "../../utils/redis";
 import { io } from "..";
 import { startGameQuestionLoop } from "../../utils/loop";
@@ -60,7 +60,7 @@ games.post('/init', async (c) => {
 })
 
 games.delete('/:gameCode', async (c) => {
-    const user = c.get("user");
+    //const user = c.get("user");
     const { gameCode } = c.req.param();
 
     await redis.del(`game:${gameCode}`);
@@ -69,7 +69,8 @@ games.delete('/:gameCode', async (c) => {
 })
 
 games.post('/:gameCode/start', async (c) => {
-    const user = c.get("user");
+    // TODO vérfier que l'utilisateur est bien l'hôte
+    //const user = c.get("user");
     const { gameCode } = c.req.param();
 
     io.to(gameCode).emit("gameStatus", { status: "started" });
@@ -79,7 +80,7 @@ games.post('/:gameCode/start', async (c) => {
         return c.json({ error: "Game settings not found" }, 404);
     }
 
-    const stopGameLoop = await startGameQuestionLoop(gameCode, parseInt(gameSettings[0]), parseInt(gameSettings[1]));
+    /* const stopGameLoop =  */await startGameQuestionLoop(gameCode, parseInt(gameSettings[0]), parseInt(gameSettings[1]));
 
     return c.json({ message: `Game ${gameCode} started` });
 })

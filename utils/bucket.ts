@@ -1,4 +1,4 @@
-import { s3, S3Client, S3File } from "bun";
+import { S3Client, S3File } from "bun";
 
 export const S3 = new S3Client({
     accessKeyId: process.env.BUCKET_ACCESS_KEY,

@@ -101,7 +101,7 @@ app.use('/static/*', serveStatic({ root: './' }))
 export default {
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
   
-  fetch(req: any, server: any) {
+  fetch(req: Request, server: Bun.Server<any>) {
     const url = new URL(req.url);
 
     if (url.pathname === "/socket.io/") {
