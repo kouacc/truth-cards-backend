@@ -54,7 +54,7 @@ COPY --chown=bunuser:bunuser drizzle.config.ts ./
 USER bunuser
 
 # Installer Curl pour health check
-RUN apt-get install -y curl
+RUN apt-get -y update && apt-get install -y curl
 
 # Exposer le port
 EXPOSE 3000
