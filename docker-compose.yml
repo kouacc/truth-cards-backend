@@ -16,7 +16,7 @@ services:
     restart: "no"
 
   backend:
-    build: .
+    image: ghcr.io/kouacc/truth-cards-backend
     ports:
       - "3000:3000"
     env_file:
