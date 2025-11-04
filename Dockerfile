@@ -53,6 +53,9 @@ COPY --chown=bunuser:bunuser drizzle.config.ts ./
 # Changer vers l'utilisateur non-privilégié
 USER bunuser
 
+# Installer Curl pour health check
+RUN apt-get install -y curl
+
 # Exposer le port
 EXPOSE 3000
 
