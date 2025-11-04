@@ -6,13 +6,12 @@ import { serveStatic } from 'hono/bun';
 import { deleteProfilePicture, uploadProfilePicture } from '../utils/bucket';
 import { io as socketIo, engine, websocket } from './socket';
 
-// Réexporter io pour que les autres modules puissent l'importer depuis l'index
 export const io = socketIo;
 
 const app = new Hono();
 
 app.use(
-	"*", // or replace with "*" to enable cors for all routes
+	"*",
 	cors({
 		origin: [process.env.NODE_ENV === "production" ? "https://admin.truthcards.maxencelallemand.fr" : "http://localhost:5173", "https://admin.socket.io"],
 		allowHeaders: ["Content-Type", "Authorization"],
@@ -101,6 +100,7 @@ app.use('/static/*', serveStatic({ root: './' }))
 export default {
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fetch(req: Request, server: Bun.Server<any>) {
     const url = new URL(req.url);
 

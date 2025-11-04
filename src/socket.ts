@@ -3,6 +3,7 @@ import { Server as Engine } from "@socket.io/bun-engine";
 import { client as redis } from '../utils/redis';
 import { auth } from '../utils/auth';
 import { instrument } from '@socket.io/admin-ui';
+import '../types/socket';
 
 export const io = new Server();
 export const engine = new Engine();
@@ -23,7 +24,7 @@ io.on("connection", (socket) => {
     socket.join(code);
 
     // Mettre l'utilisateur dans la liste des joueurs
-    await redis.sadd(`game:${code}:players`, (socket as any).user ? JSON.stringify({ id: (socket as any).user.id, name: (socket as any).user.username }) : JSON.stringify({ id: userId, name: `Guest ${userId.split('_')[1].substring(0, 8)}` }));
+    await redis.sadd(`game:${code}:players`, socket.user ? JSON.stringify({ id: socket.user.id, name: socket.user.username }) : JSON.stringify({ id: userId, name: `Guest ${userId.split('_')[1].substring(0, 8)}` }));
 
     socket.emit("joined", { game: code });
 
@@ -100,10 +101,12 @@ io.on("connection", (socket) => {
 io.use(async (socket, next) => {
   const headers = socket.handshake.headers;
 
-  const session = await auth.api.getSession({ headers: headers as any })
+  const session = await auth.api.getSession({ 
+    headers: headers as unknown as Headers 
+  })
 
   if (session) {
-    (socket as any).user = session.user;
+    socket.user = session.user;
     return next();
   }
   return next();
