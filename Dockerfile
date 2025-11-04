@@ -46,12 +46,14 @@ COPY --from=deps --chown=bunuser:bunuser /app/package.json ./package.json
 # Copier le code source nécessaire
 COPY --chown=bunuser:bunuser src ./src
 COPY --chown=bunuser:bunuser utils ./utils
+COPY --chown=bunuser:bunuser types ./types
 COPY --chown=bunuser:bunuser db ./db
 COPY --chown=bunuser:bunuser emails ./emails
 COPY --chown=bunuser:bunuser assets ./assets
 COPY --chown=bunuser:bunuser migrate.ts ./
 COPY --chown=bunuser:bunuser tsconfig.json ./
 COPY --chown=bunuser:bunuser drizzle.config.ts ./
+
 
 # Changer vers l'utilisateur non-privilégié
 USER bunuser
