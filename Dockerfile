@@ -1,6 +1,9 @@
 # Utiliser l'image officielle Bun
 FROM oven/bun:1.2-debian AS base
 
+# Installer curl
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Étape de construction des dépendances
 FROM base AS deps
 WORKDIR /app
@@ -52,9 +55,6 @@ COPY --chown=bunuser:bunuser drizzle.config.ts ./
 
 # Changer vers l'utilisateur non-privilégié
 USER bunuser
-
-# Installer Curl pour health check
-RUN apt-get -y update && apt-get install -y curl
 
 # Exposer le port
 EXPOSE 3000
