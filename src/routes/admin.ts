@@ -24,15 +24,15 @@ admin.use("*", async (c, next) => {
   	}
   	c.set("user", session.user);
   	c.set("session", session.session);
+
+    if (session.user.role !== 'admin') {
+        return c.body(null, 403);
+    }
+
   	return next();
 });
 
 admin.get('/categories', async (c) => {
-    const user = c.get("user")
-	
-	if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const base = await db.query.category.findMany({
         columns: {
             id: true,
@@ -63,11 +63,6 @@ admin.get('/categories', async (c) => {
 })
 
 admin.post('/categories/create', async (c) => {
-    const user = c.get("user")
-	
-	if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { title, description } = await c.req.json<Category>();
 
     const id = createID();
@@ -85,11 +80,6 @@ admin.post('/categories/create', async (c) => {
 })
 
 admin.get('/categories/:id', async (c) => {
-    const user = c.get("user")
-	
-	if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { id } = c.req.param();
 
     const cat = await db.query.category.findFirst({
@@ -123,11 +113,6 @@ admin.get('/categories/:id', async (c) => {
 })
 
 admin.patch('/categories/:id', async (c) => {
-    const user = c.get("user")
-    
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { id } = c.req.param();
 
     const { title, description } = await c.req.json<Category>();
@@ -143,11 +128,6 @@ admin.patch('/categories/:id', async (c) => {
 });
 
 admin.patch('/categories/:id/assets', async (c) => {
-    const user = c.get("user")
-
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const formData = await c.req.formData();
     const editedAsset = formData.get('editedAsset') as string;
     const asset = formData.get('asset') as File;
@@ -171,11 +151,6 @@ admin.patch('/categories/:id/assets', async (c) => {
 
 
 admin.delete('/categories/:id', async (c) => {
-    const user = c.get("user")
-	
-	if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { id } = c.req.param();
 
     await db.delete(category).where(eq(category.id, id));
@@ -186,11 +161,6 @@ admin.delete('/categories/:id', async (c) => {
 })
 
 admin.post('/questions/create', async (c) => {
-    const user = c.get("user")
-	
-	if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { question: ques, answer, category } = await c.req.json<Question>();
 
     const q = await db.insert(question).values({
@@ -203,11 +173,6 @@ admin.post('/questions/create', async (c) => {
 })
 
 admin.patch('/questions/:id', async (c) => {
-    const user = c.get("user")
-    
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { id } = c.req.param();
 
     const { question: ques, answer, category } = await c.req.json<Question>();
@@ -224,11 +189,6 @@ admin.patch('/questions/:id', async (c) => {
 });
 
 admin.delete('/questions/:id', async (c) => {
-    const user = c.get("user")
-	
-	if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { id } = c.req.param();
 
     await db.delete(question).where(eq(question.id, id));
@@ -237,10 +197,6 @@ admin.delete('/questions/:id', async (c) => {
 })
 
 admin.get('/sets/:userId', async (c) => {
-    const user = c.get("user")
-
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
     const { userId } = c.req.param();
 
     const data = await db.query.sets.findMany({
@@ -255,10 +211,6 @@ admin.get('/sets/:userId', async (c) => {
 })
 
 admin.delete('/sets/:id', async (c) => {
-    const user = c.get("user")
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { id } = c.req.param();
     await db.delete(sets).where(eq(sets.id, id));
 
@@ -266,11 +218,6 @@ admin.delete('/sets/:id', async (c) => {
 })
 
 admin.get('/reports', async (c) => {
-    const user = c.get("user")
-
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const reports = await db.query.reports.findMany({
         columns: {
             id: true,
@@ -299,10 +246,6 @@ admin.get('/reports', async (c) => {
 })
 
 admin.get('/reports/:id', async (c) => {
-    const user = c.get("user")
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { id } = c.req.param();
     const report = await db.query.reports.findFirst({
         where: eq(reports.id, id),
@@ -334,11 +277,6 @@ admin.get('/reports/:id', async (c) => {
 })
 
 admin.delete('/reports/:id', async (c) => {
-    const user = c.get("user")
-
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { id } = c.req.param();
 
     await db.delete(reports).where(eq(reports.id, id));
@@ -347,11 +285,6 @@ admin.delete('/reports/:id', async (c) => {
 })
 
 admin.post('/:userId/profilepic', async (c) => {
-    const user = c.get("user")
-    if(!user) return c.body(null, 401);
-
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { userId } = c.req.param();
 
     const queryUser = await auth.api.getUser({
@@ -378,11 +311,6 @@ admin.post('/:userId/profilepic', async (c) => {
 })
 
 admin.get('/legal/diff', async (c) => {
-    const user = c.get("user")
-
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const cgu = Bun.file('./assets/cgu.md');
     const mentions = Bun.file('./assets/mentions.md');
     const privacy = Bun.file('./assets/privacy.md');
@@ -395,11 +323,6 @@ admin.get('/legal/diff', async (c) => {
 })
 
 admin.put('/legal/:type', async (c) => {
-    const user = c.get("user")
-
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { type } = c.req.param() as { type: 'cgu' | 'mentions' | 'privacy' };
 
     if(!['cgu', 'mentions', 'privacy'].includes(type)) {
@@ -413,10 +336,6 @@ admin.put('/legal/:type', async (c) => {
 })
 
 admin.get('/dashboard', async (c) => {
-    const user = c.get("user")
-    if(!user) return c.body(null, 401);
-    if(user.role !== 'admin') return c.body(null, 403);
-
     const { categoriesCount, usersCount, questionsCount, setsCount } = await getStats();
 
     const rooms = Array.from(io.sockets.adapter.rooms.keys()).filter(roomId => roomId.length === 6);
