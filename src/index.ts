@@ -29,7 +29,7 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 app.route('/health', healthCheck)
 app.route('/games', games)
 app.route('/admin', admin)
-app.route('/custom', userSets)
+app.route('/sets', userSets)
 
 app.get('/version', (c) => {
   // TODO: return version id
