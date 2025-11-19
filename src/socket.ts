@@ -5,6 +5,7 @@ import { auth } from '../utils/auth';
 import { instrument } from '@socket.io/admin-ui';
 import '../types/socket';
 import { GameSettings } from "./routes/games";
+import type { AnswerEvent, JoinEvent } from "../types/socket";
 
 export const io = new Server();
 export const engine = new Engine();
@@ -13,8 +14,9 @@ io.bind(engine);
 io.on("connection", (socket) => {
   const userId = `guest_${crypto.randomUUID()}`;
 
-  socket.on("join", async (data) => {
-    const { code } = data;  // gameId
+
+  socket.on("join", async (data: JoinEvent) => {
+    const { code } = data;
 
     const gameExists = await redis.exists(`game:${code}:settings`);
     if (!gameExists) {
@@ -28,6 +30,7 @@ io.on("connection", (socket) => {
     await redis.sadd(`game:${code}:players`, socket.user ? JSON.stringify({ id: socket.user.id, name: socket.user.username }) : JSON.stringify({ id: userId, name: `Guest ${userId.split('_')[1].substring(0, 8)}` }));
 
     const gameSettings = await redis.hgetall(`game:${code}:settings`);
+    gameSettings.host = gameSettings.host ? JSON.parse(gameSettings.host) : null;
 
     socket.emit("joined", { game: code });
     socket.emit('sessionInfo', gameSettings);
@@ -38,7 +41,9 @@ io.on("connection", (socket) => {
 
   }); 
 
-  socket.on("sendAnswer", async (data) => {
+
+
+  socket.on("sendAnswer", async (data: AnswerEvent) => {
     const { answer } = data;
     const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
     if (rooms.length === 0) {
@@ -54,6 +59,8 @@ io.on("connection", (socket) => {
 
     socket.emit("answerReceived", { answer });
   })
+
+
 
   socket.on("answerVote", async (data) => {
     const { score, answerId, questionIndex } = data;
@@ -102,6 +109,8 @@ io.on("connection", (socket) => {
     }
   })
 
+
+
   socket.on("updateSettings", async (data) => {
     const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
     if (rooms.length === 0) {
@@ -125,6 +134,9 @@ io.on("connection", (socket) => {
     const hset = convertObjectToHMSet(settings);
     redis.hmset(`game:${gameId}:settings`, hset);
   })
+
+
+  
 });
 
 io.use(async (socket, next) => {

@@ -5,3 +5,12 @@ declare module "socket.io" {
     user?: User;
   }
 }
+
+export type JoinEvent = {
+  code: string
+}
+
+export type AnswerEvent = {
+  answer: string
+}
+
