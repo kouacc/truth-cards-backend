@@ -14,10 +14,12 @@ const games = new Hono<{
 	}
 }>();
 
-interface GameSettings {
-    customQuestions?: { [key: string]: string };
+export interface GameSettings {
+    host: string;
+    sets: string[];
     amountOfQuestions?: number;
     timePerQuestion?: number;
+    owner?: string
 }
 
 games.use("*", async (c, next) => {
@@ -34,27 +36,25 @@ games.use("*", async (c, next) => {
 
 games.post('/init', async (c) => {
     const user = c.get("user");
-    const { customQuestions, amountOfQuestions, timePerQuestion }: GameSettings = await c.req.json();
  
     const gameCode = createGameCode();
     const gameToken = createGameToken();
 
-    const gameInfo = {
-        host: user?.id || null,
-        gameCode: gameCode,
-        customQuestions: customQuestions || {},
-        amountOfQuestions: amountOfQuestions || 10,
-        timePerQuestion: timePerQuestion || 30,
+    const gameInfo: GameSettings = {
+        host: JSON.stringify({ id: user?.id || "anonymous", username: user?.displayUsername || "Anonymous"}),
+        sets: [],
+        amountOfQuestions: 10,
+        timePerQuestion: 30,
     }
 
-    const questions = await getQuestions({ amount: gameInfo.amountOfQuestions });
-
+    
     await redis.hmset(`game:${gameCode}:settings`, convertObjectToHMSet(gameInfo));
     await redis.set(`game:${gameCode}:currentQuestionIndex`, "0");
-
+    
+    /* const questions = await getQuestions({ amount: gameInfo.amountOfQuestions });
     //push les questions dans une liste redis
     const serializedQuestions = questions.map(q => JSON.stringify(q));
-    await redis.rpush(`game:${gameCode}:questions`, ...serializedQuestions as [string, ...string[]]);
+    await redis.rpush(`game:${gameCode}:questions`, ...serializedQuestions as [string, ...string[]]); */
 
     return c.json({ gameCode, gameToken });
 })
