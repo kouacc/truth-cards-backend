@@ -1,9 +1,10 @@
 import { Server } from "socket.io";
 import { Server as Engine } from "@socket.io/bun-engine";
-import { client as redis } from '../utils/redis';
+import { convertObjectToHMSet, client as redis } from '../utils/redis';
 import { auth } from '../utils/auth';
 import { instrument } from '@socket.io/admin-ui';
 import '../types/socket';
+import { GameSettings } from "./routes/games";
 
 export const io = new Server();
 export const engine = new Engine();
@@ -26,11 +27,15 @@ io.on("connection", (socket) => {
     // Mettre l'utilisateur dans la liste des joueurs
     await redis.sadd(`game:${code}:players`, socket.user ? JSON.stringify({ id: socket.user.id, name: socket.user.username }) : JSON.stringify({ id: userId, name: `Guest ${userId.split('_')[1].substring(0, 8)}` }));
 
+    const gameSettings = await redis.hgetall(`game:${code}:settings`);
+
     socket.emit("joined", { game: code });
+    socket.emit('sessionInfo', gameSettings);
 
     const playersData = await redis.smembers(`game:${code}:players`);
     const players = playersData.map(playerStr => JSON.parse(playerStr));
     io.to(code).emit("players", { players });
+
   }); 
 
   socket.on("sendAnswer", async (data) => {
@@ -95,6 +100,30 @@ io.on("connection", (socket) => {
       console.error("Error storing vote:", error);
       socket.emit("error", { msg: "Failed to store vote" });
     }
+  })
+
+  socket.on("updateSettings", async (data) => {
+    const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
+    if (rooms.length === 0) {
+      socket.emit("error", { msg: "You are not in a game" });
+      return;
+    }
+
+    const gameId = rooms[0];
+
+    const settings: Partial<GameSettings> = data;
+
+    const host = await redis.hget(`game:${gameId}:settings`, "host");
+    const user = socket.user;
+    if (host !== user?.id) {
+      socket.emit("error", { msg: "You are not the host" });
+    } 
+
+    settings.host = host ?? undefined;
+
+    //update les settings dans redis
+    const hset = convertObjectToHMSet(settings);
+    redis.hmset(`game:${gameId}:settings`, hset);
   })
 });
 
