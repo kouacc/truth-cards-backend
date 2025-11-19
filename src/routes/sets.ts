@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { auth } from "../../utils/auth";
 import { db } from "../../db/drizzle";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { question, sets } from "../../db/schemas/schema";
 import badwords from 'french-badwords-list';
 
@@ -24,7 +24,7 @@ userSets.use("*", async (c, next) => {
     return next();
 });
 
-userSets.get("/list", async (c) => {
+userSets.get("/", async (c) => {
     const user = c.get("user")
 
     if(!user) return c.body(null, 401);
@@ -32,10 +32,48 @@ userSets.get("/list", async (c) => {
     const data = await db.query.sets.findMany({
         where: eq(sets.created_by, user.id),
         orderBy: (sets, { desc }) => [desc(sets.updatedAt)],
+        columns: {
+            id: true,
+            title: true,
+            createdAt: true,
+        },
+        extras: {
+            questionCount: sql<number>`(select count(*) from ${question} where ${question.setId} = ${sets.id})`.as('questionCount')
+        }
     })
 
     return c.json(data);
 });
+
+userSets.get('/:setId', async (c) => {
+    const user = c.get("user")
+    if(!user) return c.body(null, 401);
+
+    const { setId } = c.req.param();
+
+    const data = await db.query.sets.findFirst({
+        where: eq(sets.id, setId),
+        columns: {
+            id: true,
+            title: true,
+            createdAt: true,
+        },
+        with: {
+            questions: {
+                columns: {
+                    id: true,
+                    question: true,
+                    answer: true,
+                    createdAt: true
+                }
+            }
+        }
+    })
+
+    if (!data) return c.body(null, 404);
+
+    return c.json(data)
+})
 
 userSets.post("/create", async (c) => {
     const user = c.get("user")
