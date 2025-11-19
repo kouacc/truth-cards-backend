@@ -43,6 +43,20 @@
       "when": 1760693545136,
       "tag": "0005_crazy_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1763111151661,
+      "tag": "0006_dapper_yellow_claw",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1763111241407,
+      "tag": "0007_fast_molten_man",
+      "breakpoints": true
     }
   ]
 }

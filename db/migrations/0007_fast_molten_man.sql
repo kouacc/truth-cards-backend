@@ -1,0 +1,2 @@
+ALTER TABLE "answers" ADD COLUMN "question_id" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "answers" ADD CONSTRAINT "answers_question_id_question_id_fk" FOREIGN KEY ("question_id") REFERENCES "public"."question"("id") ON DELETE no action ON UPDATE no action;
