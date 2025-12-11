@@ -26,8 +26,8 @@ export const email = new Email({
         }
     },
     preview: {
-        open: true,
+        open: false,
         openSimulator: false
     },
-    send: true //process.env.NODE_ENV === 'production',
+    send: process.env.NODE_ENV === 'production',
 })
