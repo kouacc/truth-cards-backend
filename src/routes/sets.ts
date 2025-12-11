@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { auth } from "../../utils/auth";
 import { db } from "../../db/drizzle";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { question, sets } from "../../db/schemas/schema";
 import badwords from 'french-badwords-list';
 
@@ -106,7 +106,7 @@ userSets.post('/add-question', async (c) => {
     const user = c.get("user")
     if(!user) return c.body(null, 401);
 
-    const { question: questionString, answer, setId } = await c.req.json<{ question: string, answer?: string, setId: string, }>();
+    const { question: questionString, answer, setId } = await c.req.json<{ question: string, answer?: string, setId: string }>();
 
     if (badwords.regex.test(questionString)) {
         return c.body(null, 400);
@@ -122,17 +122,53 @@ userSets.post('/add-question', async (c) => {
         setId
     }).returning();
 
-    return c.json(data);
+    c.status(201);
+    return c.json(data[0]);
 })
 
-userSets.delete('/question/:questionId', async (c) => {
+userSets.patch('/:setId/question/:questionId', async (c) => {
     const user = c.get("user")
     if(!user) return c.body(null, 401);
 
-    const { questionId } = c.req.param();
+    const { setId, questionId } = c.req.param();
+    const { question: questionString, answer } = await c.req.json<{ question?: string, answer?: string }>();
 
-    const data = await db.delete(question).where(eq(question.id, questionId)).returning();
+    if (questionString && badwords.regex.test(questionString)) {
+        return c.body(null, 400);
+    }
+
+    if (answer && badwords.regex.test(answer)) {
+        return c.body(null, 400);
+    }
+
+    const data = await db.update(question).set({
+        question: questionString,
+        answer: answer
+    }).where(and(
+        eq(question.id, questionId),
+        eq(question.setId, setId),
+        sql`EXISTS (SELECT 1 FROM ${sets} WHERE ${sets.id} = ${question.setId} AND ${sets.created_by} = ${user.id})`
+    )).returning();
+
     if (!data) return c.body(null, 404);
+
+    return c.json(data[0]);
+})
+
+userSets.delete('/:setId/question/:questionId', async (c) => {
+    const user = c.get("user")
+    if(!user) return c.body(null, 401);
+
+    const { setId, questionId } = c.req.param();
+
+    const data = await db.delete(question)
+        .where(and(
+            eq(question.id, questionId), 
+            eq(question.setId, setId),
+            sql`EXISTS (SELECT 1 FROM ${sets} WHERE ${sets.id} = ${question.setId} AND ${sets.created_by} = ${user.id})`
+        ))
+        .returning();
+    if (!data || data.length === 0) return c.body(null, 404);
 
     return c.json(data);
 })
