@@ -75,12 +75,19 @@ games.post('/:gameCode/start', async (c) => {
 
     io.to(gameCode).emit("gameStatus", { status: "started" });
 
-    const gameSettings = await redis.hmget(`game:${gameCode}:settings`, ["amountOfQuestions", "timePerQuestion"]);
-    if (!gameSettings[0] || !gameSettings[1]) {
+    const [amountOfQuestions, timePerQuestion, sets] = await redis.hmget(`game:${gameCode}:settings`, ["amountOfQuestions", "timePerQuestion", "sets"]);
+    if (!amountOfQuestions || !timePerQuestion) {
         return c.json({ error: "Game settings not found" }, 404);
     }
 
-    /* const stopGameLoop =  */await startGameQuestionLoop(gameCode, parseInt(gameSettings[0]), parseInt(gameSettings[1]));
+    const gameSettings = { amountOfQuestions: parseInt(amountOfQuestions), timePerQuestion: parseInt(timePerQuestion), sets: sets ? JSON.parse(sets) : [] };
+
+    // TODO fetch les questions et ajouter dans redis
+    const questions = await getQuestions({ amount: parseInt(amountOfQuestions), sets: gameSettings.sets });
+    const serializedQuestions = questions.map(q => JSON.stringify(q));
+    await redis.rpush(`game:${gameCode}:questions`, ...serializedQuestions as [string, ...string[]]);
+
+    await startGameQuestionLoop(gameCode, gameSettings.amountOfQuestions, gameSettings.timePerQuestion);
 
     return c.json({ message: `Game ${gameCode} started` });
 })
