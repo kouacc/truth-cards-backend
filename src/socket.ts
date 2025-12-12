@@ -7,15 +7,20 @@ import '../types/socket';
 import { GameSettings } from "./routes/games";
 import type { AnswerEvent, JoinEvent } from "../types/socket";
 
-export const io = new Server();
+export const io = new Server({
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: false
+  }
+});
 export const engine = new Engine();
 io.bind(engine);
 
 io.on("connection", (socket) => {
-  const userId = `guest_${crypto.randomUUID()}`;
+  const userId = socket.user?.id || `guest_${crypto.randomUUID()}` 
 
 
-  socket.on("join", async (data: JoinEvent) => {
+  socket.on("join", async (data: JoinEvent, callback) => {
     const { code } = data;
 
     const gameExists = await redis.exists(`game:${code}:settings`);
@@ -27,24 +32,44 @@ io.on("connection", (socket) => {
     socket.join(code);
 
     // Mettre l'utilisateur dans la liste des joueurs
-    await redis.sadd(`game:${code}:players`, socket.user ? JSON.stringify({ id: socket.user.id, name: socket.user.username }) : JSON.stringify({ id: userId, name: `Guest ${userId.split('_')[1].substring(0, 8)}` }));
+    await redis.sadd(`game:${code}:players`, socket.user ? JSON.stringify({ id: socket.user.id, name: socket.user.username, image: socket.user.image ?? null }) : JSON.stringify({ id: userId, name: `Guest ${userId.split('_')[1].substring(0, 8)}` }));
 
     const gameSettings = await redis.hgetall(`game:${code}:settings`);
     gameSettings.host = gameSettings.host ? JSON.parse(gameSettings.host) : null;
 
-    socket.emit("joined", { game: code });
-    socket.emit('sessionInfo', gameSettings);
-
     const playersData = await redis.smembers(`game:${code}:players`);
     const players = playersData.map(playerStr => JSON.parse(playerStr));
-    io.to(code).emit("players", { players });
 
+    callback({ success: true, gameSettings, players });
+    io.to(code).emit("players", { players });
   }); 
 
+  socket.on("leave", async () => {
+    const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
+    if (rooms.length === 0) {
+      socket.emit("error", { msg: "You are not in a game" });
+      return;
+    }
+
+    const gameId = rooms[0];
+
+    await redis.srem(`game:${gameId}:players`, socket.user ? JSON.stringify({ id: socket.user.id, name: socket.user.username }) : JSON.stringify({ id: userId, name: `Guest ${userId.split('_')[1].substring(0, 8)}` }));
+    socket.leave(gameId);
+
+    const playersData = await redis.smembers(`game:${gameId}:players`);
+    const players = playersData.map(playerStr => JSON.parse(playerStr));
+    io.to(gameId).emit("players", { players });
+
+    // verifier le nombre de joueurs connectés à la room
+    const room = io.sockets.adapter.rooms.get(gameId);
+    if (!room || room.size === 0) {
+      // TODO: ajouter ttl si la partie n'a pas été commencée et que plus personne n'est connecté
+    }
+  })
 
 
-  socket.on("sendAnswer", async (data: AnswerEvent) => {
-    const { answer } = data;
+  socket.on("sendAnswer", async (data: AnswerEvent, callback) => {
+    const answer = data;
     const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
     if (rooms.length === 0) {
       socket.emit("error", { msg: "You are not in a game" });
@@ -57,7 +82,9 @@ io.on("connection", (socket) => {
     const answerData = JSON.stringify({ userId, answer, timestamp: Date.now() });
     await redis.lpush(`game:${gameId}:answers:q${currentQuestionIndex}:answers`, answerData);
 
-    socket.emit("answerReceived", { answer });
+    // emit vers la room
+    socket.to(gameId).emit("playerHasAnswered", { [socket.user?.id ?? userId]: true})
+    callback({ success: true, answer: answerData });
   })
 
 
@@ -67,7 +94,7 @@ io.on("connection", (socket) => {
     
     // Validation du score (doit être entre 1 et 3)
     if (!score || ![1, 2, 3].includes(score)) {
-      socket.emit("error", { msg: "Invalid score. Score must be 1, 2, or 3" });
+      socket.emit("error", { msg: "Score invalide. Le score doit être 1, 2 ou 3" });
       return;
     }
 
@@ -92,7 +119,7 @@ io.on("connection", (socket) => {
       const scoreKey = `game:${gameId}:scores:q${questionIndex}:${answerId}`;
       await redis.lpush(scoreKey, score.toString());
 
-      // Optionnel: Compter le nombre total de votes pour cette réponse
+      
       const voteCount = await redis.llen(scoreKey);
 
       socket.emit("voteReceived", { 
@@ -133,10 +160,9 @@ io.on("connection", (socket) => {
     //update les settings dans redis
     const hset = convertObjectToHMSet(settings);
     redis.hmset(`game:${gameId}:settings`, hset);
+
+    io.to(gameId).emit("gameSettings", { settings });
   })
-
-
-  
 });
 
 io.use(async (socket, next) => {
