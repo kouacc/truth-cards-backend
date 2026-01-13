@@ -13,7 +13,7 @@ const app = new Hono();
 app.use(
 	"*",
 	cors({
-		origin: [process.env.NODE_ENV === "production" ? "https://admin.truthcards.maxencelallemand.fr" : "http://localhost:5173", "https://admin.socket.io"],
+		origin: [process.env.NODE_ENV === "production" ? "https://admin.truthcards.maxencelallemand.fr" : "http://localhost:5173", "https://admin.socket.io", "https://truthcards.maxencelallemand.fr"],
 		allowHeaders: ["Content-Type", "Authorization"],
 		allowMethods: ["POST", "GET", "OPTIONS", "PUT", "DELETE", "PATCH"],
 		exposeHeaders: ["Content-Length"],
