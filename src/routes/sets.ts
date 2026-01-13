@@ -38,7 +38,7 @@ userSets.get("/", async (c) => {
             createdAt: true,
         },
         extras: {
-            questionCount: sql<number>`(select count(*) from ${question} where ${question.setId} = ${sets.id})`.as('questionCount')
+            questionCount: sql<number>`(select count(*) from ${question} where question.set_id = ${sets.id})`.as('questionCount')
         }
     })
 

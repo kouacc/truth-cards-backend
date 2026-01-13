@@ -95,6 +95,58 @@ app.post('/user/picture', async (c) => {
   return c.json({ profilePictureUrl });
 })
 
+app.post('/contact', async (c) => {
+  const data = await c.req.json<{ name: string, email: string, message: string}>();
+  
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  
+  if (!webhookUrl) {
+    return c.json({ error: 'Discord webhook not configured' }, 500);
+  }
+
+  try {
+    const embed = {
+      title: "📬 Nouveau message de contact",
+      color: 0x5865F2,
+      fields: [
+        {
+          name: "Nom",
+          value: data.name,
+          inline: true
+        },
+        {
+          name: "Email",
+          value: data.email,
+          inline: true
+        },
+        {
+          name: "Message",
+          value: data.message,
+          inline: false
+        }
+      ],
+      timestamp: new Date().toISOString()
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ embeds: [embed] })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send to Discord');
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error sending to Discord:', error);
+    return c.json({ error: 'Failed to send message' }, 500);
+  }
+})
+
 app.use('/static/*', serveStatic({ root: './' }))
 
 export default {
