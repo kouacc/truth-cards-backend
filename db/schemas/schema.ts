@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, json, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { createID } from "../../utils";
 import type { InferSelectModel } from "drizzle-orm";
 import { user } from "./auth-schema";
@@ -30,7 +30,8 @@ export const sets = pgTable('sets', {
 
 export const games = pgTable('games', {
     id: text("id").primaryKey().notNull().$defaultFn(() => createID(32)),
-    players: text("players").notNull(), // JSON stringified array of player IDs
+    players: json().$type<string[]>().notNull(),
+    settings: json().notNull(),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     endedAt: timestamp("ended_at"),
 })
