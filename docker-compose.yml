@@ -36,12 +36,15 @@ services:
       test: "curl -f http://localhost:3000/health || exit 1"
       interval: 30s
       timeout: 10s
-      retries: 5  
+      retries: 5
     networks:
       truth-cards-network:
         ipv4_address: 172.20.0.2
     volumes:
-      - ./assets:/app/assets:ro
+      - type: bind
+        source: ./assets
+        target: /app/assets
+        read_only: false
     restart: unless-stopped
 
   postgres:
