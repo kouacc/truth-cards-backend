@@ -1,6 +1,7 @@
 import { goToNextQuestion } from "./questions";
 import { client as redis } from "./redis";
 import { io } from "../src";
+import { calculateScore } from "./score";
 
 export async function startGameQuestionLoop(gameCode: string, questionCount: number, intervalInSeconds: number) {
     console.log(`Started game loop for game ${gameCode} with ${questionCount} questions, ${intervalInSeconds}s interval`);
@@ -69,10 +70,11 @@ export async function startAnswersValidationLoop(gameCode: string, intervalInSec
 
     const intervalMs = intervalInSeconds * 1000;
     const questionsCount = await redis.llen(`game:${gameCode}:questions`);
-    const startingIndex = questionsCount > 0 ? 1 : 0;
+    const startingIndex = 1; // Commencer à 1 pour ignorer la question 0
     await redis.set(`game:${gameCode}:currentQuestionIndex`, `${startingIndex}`);
 
-    const intervalId = setInterval(async () => {
+    // Fonction pour traiter une question
+    const processQuestion = async () => {
         try {
             let currentQuestionIndex = await redis.get(`game:${gameCode}:currentQuestionIndex`);
 
@@ -88,11 +90,12 @@ export async function startAnswersValidationLoop(gameCode: string, intervalInSec
                 await redis.set(`game:${gameCode}:currentQuestionIndex`, `${startingIndex}`);
             }
 
-            if (questionsCount === 0 || questionIndex > questionsCount) {
+            if (questionsCount === 0 || questionIndex >= questionsCount) {
                 console.log(`No more questions to validate for game ${gameCode}`);
-                clearInterval(intervalId);
                 io.to(gameCode).emit("gameStatus", { status: "ended" });
-                return;
+                // communiquer les scores par joueur
+                io.to(gameCode).emit('finalScores', await calculateScore(gameCode));
+                return false; // Indique qu'il faut arrêter la boucle
             }
 
             const answersKey = `game:${gameCode}:answers:q${questionIndex}:answers`;
@@ -102,19 +105,21 @@ export async function startAnswersValidationLoop(gameCode: string, intervalInSec
                 console.log(`No answers found for question ${questionIndex} in game ${gameCode}`);
                 await redis.incr(`game:${gameCode}:currentQuestionIndex`);
 
-                if (questionIndex >= questionsCount) {
-                    clearInterval(intervalId);
+                if (questionIndex + 1 >= questionsCount) {
                     io.to(gameCode).emit("gameStatus", { status: "ended" });
+                    // communiquer les scores par joueur
+                    io.to(gameCode).emit('finalScores', await calculateScore(gameCode));
+                    return false; // Indique qu'il faut arrêter la boucle
                 }
 
-                return;
+                return true; // Continue la boucle
             }
 
             const answers = answersRaw.map((entry) => JSON.parse(entry)) as { userId: string; answer: string }[];
 
             // Récupérer la question depuis Redis
             const questionKey = `game:${gameCode}:questions`;
-            const questionRaw = await redis.lindex(questionKey, questionIndex - 1) as string | null;
+            const questionRaw = await redis.lindex(questionKey, questionIndex) as string | null;
             
             let question = null;
             let correctAnswer = null;
@@ -134,14 +139,31 @@ export async function startAnswersValidationLoop(gameCode: string, intervalInSec
 
             await redis.incr(`game:${gameCode}:currentQuestionIndex`);
 
-            if (questionIndex >= questionsCount) {
-                clearInterval(intervalId);
+            if (questionIndex + 1 >= questionsCount) {
                 io.to(gameCode).emit("gameStatus", { status: "ended" });
+                // communiquer les scores par joueur
+                io.to(gameCode).emit('finalScores', await calculateScore(gameCode));
+                return false; // Indique qu'il faut arrêter la boucle
             }
+
+            return true; // Continue la boucle
         } catch (error) {
             console.error(`Error in answers validation loop for ${gameCode}:`, error);
-            clearInterval(intervalId);
             io.to(gameCode).emit("error", { message: "Answers validation loop error" });
+            return false; // Arrêter la boucle en cas d'erreur
+        }
+    };
+
+    // Premier appel immédiat
+    const shouldContinue = await processQuestion();
+    if (!shouldContinue) {
+        return () => {}; // Retourner une fonction vide si on doit arrêter
+    }
+
+    const intervalId = setInterval(async () => {
+        const shouldContinue = await processQuestion();
+        if (!shouldContinue) {
+            clearInterval(intervalId);
         }
     }, intervalMs);
 
