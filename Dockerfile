@@ -1,5 +1,5 @@
 # Utiliser l'image officielle Bun
-FROM oven/bun:1.2-debian AS base
+FROM oven/bun:latest AS base
 
 # Installer curl
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
