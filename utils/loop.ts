@@ -70,7 +70,7 @@ export async function startAnswersValidationLoop(gameCode: string, intervalInSec
 
     const intervalMs = intervalInSeconds * 1000;
     const questionsCount = await redis.llen(`game:${gameCode}:questions`);
-    const startingIndex = 1; // Commencer à 1 pour ignorer la question 0
+    const startingIndex = 1; // Commencer à 1 car les réponses sont stockées sous q1, q2, q3...
     await redis.set(`game:${gameCode}:currentQuestionIndex`, `${startingIndex}`);
 
     // Fonction pour traiter une question
@@ -118,8 +118,11 @@ export async function startAnswersValidationLoop(gameCode: string, intervalInSec
             const answers = answersRaw.map((entry) => JSON.parse(entry)) as { userId: string; answer: string }[];
 
             // Récupérer la question depuis Redis
+            // Les réponses sont stockées sous q1, q2, q3... mais les questions sont à l'index 0, 1, 2...
+            // Donc on doit récupérer la question à l'index questionIndex - 1
             const questionKey = `game:${gameCode}:questions`;
-            const questionRaw = await redis.lindex(questionKey, questionIndex) as string | null;
+            const actualQuestionIndex = questionIndex - 1;
+            const questionRaw = await redis.lindex(questionKey, actualQuestionIndex) as string | null;
             
             let question = null;
             let correctAnswer = null;
@@ -131,7 +134,7 @@ export async function startAnswersValidationLoop(gameCode: string, intervalInSec
             }
 
             io.to(gameCode).emit("nextAnswer", {
-                questionIndex,
+                questionIndex: actualQuestionIndex,
                 question,
                 correctAnswer,
                 answers,
